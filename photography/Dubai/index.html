@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dubai Photography</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      overflow-y:scroll; scroll-snap-type:y mandatory;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* persistent nav with other cities (compact) */
+    nav {
+      position:fixed; left:50%; transform:translateX(-50%); top:18px;
+      z-index:1200; display:flex; gap:18px; padding:10px 16px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.9), transparent);
+      border-radius:10px;
+    }
+    nav a { color:rgba(255,255,255,0.65); text-decoration:none; letter-spacing:2px; font-size:0.85rem; padding:6px 8px; border-radius:8px; transition:color .25s ease, background .25s ease; }
+    nav a.active { color:#fff; background:linear-gradient(90deg, rgba(138,92,255,0.08), rgba(0,229,255,0.06)); }
+
+    main { margin-top:72px; } /* space for nav */
+
+    section {
+      height:100vh; width:100vw; scroll-snap-align:start;
+      display:flex; justify-content:center; align-items:center; padding:40px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* gallery group layout flexible */
+    .gallery-group {
+      width:100%; height:100%; display:grid; gap:10px;
+      align-items:stretch;
+    }
+    .group-2{ grid-template-columns: 1fr 1fr; }
+    .group-3{ grid-template-columns: 1fr 1fr 1fr; }
+    .group-4{ grid-template-columns: 1fr 1fr; grid-template-rows:1fr 1fr; }
+
+    .img-wrapper{
+      position:relative; overflow:hidden; display:flex; justify-content:center; align-items:center;
+      opacity:0; transform: translateY(10px) scale(0.98);
+      transition: opacity 900ms cubic-bezier(.16,1,.3,1), transform 900ms cubic-bezier(.16,1,.3,1);
+      will-change: transform, opacity;
+      border-radius:12px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01));
+    }
+
+    /* visible state: zoom in slightly and fade */
+    .img-wrapper.visible{
+      opacity:1; transform: translateY(0) scale(1);
+    }
+
+    .img-wrapper img{
+      width:100%; height:100%; object-fit:cover; display:block;
+      transform-origin:center center; transition: transform 1200ms cubic-bezier(.2,.9,.2,1);
+      will-change: transform;
+    }
+
+    /* small hover micro-zoom */
+    .img-wrapper:hover img{ transform: scale(1.06) translateY(-6px); }
+
+    /* shutter / clip animation for entrance (simulate window closing effect) */
+    .shutter {
+      position:absolute; left:0; top:0; right:0; bottom:0; pointer-events:none;
+      display:grid; grid-template-rows: repeat(6, 1fr); gap:4px;
+    }
+    .shutter .slat{
+      background:linear-gradient(90deg, rgba(0,0,0,0.0), rgba(0,0,0,0.32));
+      transform-origin:center top; transform:scaleY(0);
+      transition: transform 550ms cubic-bezier(.2,.9,.2,1);
+    }
+    .shutter.open .slat{ transform:scaleY(1); }
+
+    /* caption - top-left */
+    .caption {
+      position:absolute; left:28px; top:28px; color:#fff; font-size:18px; opacity:0.9; letter-spacing:0.6px;
+      background: rgba(0,0,0,0.25); padding:8px 12px; border-radius:10px;
+    }
+
+    @media (max-width:768px){
+      .group-2,.group-3{ grid-template-columns:1fr; }
+      .caption{ left:14px; top:14px; font-size:15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="../index.html" style="font-weight:600;color:#8a5cff">Back</a>
+    <a href="../Dubai/index.html" class="active">Dubai</a>
+    <a href="../New_York/index.html">New York</a>
+    <a href="../San_Diego/index.html">San Diego</a>
+  </nav>
+
+  <main id="app"></main>
+
+  <script>
+    // Groups: adjust to match your local images set
+    const groups = [
+      [10], [1], [0], [5, 3, 4, 6], [9], [8, 12, 11, 7], [2]
+    ];
+
+    const app = document.getElementById('app');
+
+    groups.forEach((group, groupIndex) => {
+      const sec = document.createElement('section');
+
+      // create gallery grid and assign a class depending on number of images
+      const grid = document.createElement('div');
+      grid.className = 'gallery-group group-' + group.length;
+
+      group.forEach((num) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'img-wrapper';
+
+        const img = document.createElement('img');
+        img.src = `${num}.jpg`;
+        img.alt = `Dubai ${num}`;
+
+        img.onerror = () => { wrap.style.display = 'none'; };
+
+        wrap.appendChild(img);
+        grid.appendChild(wrap);
+      });
+
+      // shutter overlay that creates the "window open" animation on first view
+      const shutter = document.createElement('div');
+      shutter.className = 'shutter';
+      for (let i=0;i<6;i++){
+        const sl = document.createElement('div');
+        sl.className = 'slat';
+        shutter.appendChild(sl);
+      }
+
+      const caption = document.createElement('div');
+      caption.className = 'caption';
+      <!-- caption.textContent = `Dubai • Group ${groupIndex + 1}`; -->
+
+      sec.appendChild(grid);
+      sec.appendChild(shutter);
+      sec.appendChild(caption);
+      app.appendChild(sec);
+    });
+
+    // intersection observer to reveal images with stagger and trigger shutter open
+    const sections = document.querySelectorAll('section');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+
+        const sec = entry.target;
+        // reveal children with stagger
+        const wrappers = sec.querySelectorAll('.img-wrapper');
+        wrappers.forEach((w, i) => {
+          setTimeout(()=> w.classList.add('visible'), i * 150);
+        });
+
+        // open shutter: add class then remove after a short time so next arrival replays if desired
+        const shutter = sec.querySelector('.shutter');
+        shutter.classList.add('open');
+        // small delay before removing so it looks like a window opening then closing
+        setTimeout(()=> shutter.classList.remove('open'), 700);
+
+        // once revealed we can unobserve to avoid repeated work
+        observer.unobserve(sec);
+      });
+    }, { threshold: 0.25 });
+
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>
